@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -11,8 +14,9 @@ import (
 	"github.com/micmonay/keybd_event"
 )
 
-var pauseAfter = 30
-var startAlerts = 5
+var pauseAfter = 30 //Default Pause After Time in minutes
+var startAlerts = 5 //Default Start Alert Time in minutes
+var beepAlert = true
 
 var lastInput = getLastInput()
 
@@ -22,7 +26,11 @@ var lastInputInfo struct {
 }
 
 func main() {
+	getTimeForTimer()
+	getAlertTime()
+	getBeepAlert()
 	timer(pauseAfter) // in minutes
+
 }
 
 func pauseShow() {
@@ -51,7 +59,7 @@ func timer(t int) {
 	for {
 		isInput := wasThereInput()
 		if !isInput {
-			fmt.Println("sleeping", i)
+			fmt.Printf("Been inactive for %v mins\n", i)
 			alert(i)
 			time.Sleep(1 * time.Minute)
 			i++
@@ -100,10 +108,70 @@ func notifyTimeBefore(t int) {
 	if err != nil {
 		panic(err)
 	}
-	if t == 1 {
+	if t == 1 && beepAlert {
 		err := beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
 		if err != nil {
 			panic(err)
 		}
+	}
+}
+
+func getTimeForTimer() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("How long do you want to set the timer in minutes? (default: %v) ", pauseAfter)
+	text, _ := reader.ReadString('\n')
+	text = strings.Trim(text, "\r\n")
+	if text != "" {
+		i, err := strconv.Atoi(text)
+		if err != nil {
+			fmt.Println("Invalid Number: ", err)
+			getTimeForTimer()
+			return
+		}
+		pauseAfter = i
+	}
+	fmt.Printf("Will pause after %v mins of inactivity\n", pauseAfter)
+}
+
+func getAlertTime() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("At what time do you want alerts to start in mins? (default: %v) ", startAlerts)
+	text, _ := reader.ReadString('\n')
+	text = strings.Trim(text, "\r\n")
+	if text != "" {
+		i, err := strconv.Atoi(text)
+		if err != nil {
+			fmt.Println("Invalid Number: ", err)
+			getTimeForTimer()
+			return
+		}
+		startAlerts = i
+	}
+
+	fmt.Printf("Will start alerts %v mins before pause\n", startAlerts)
+}
+
+func getBeepAlert() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("Do you wish to have a beep alert on last notification? y/n (default: y) ")
+	text, _ := reader.ReadString('\n')
+	text = strings.Trim(text, "\r\n")
+	text = strings.ToLower(text)
+	switch text {
+	case "y":
+		beepAlert = true
+	case "n":
+		beepAlert = false
+	case "":
+		beepAlert = true
+	default:
+		fmt.Println("Invalid y/n")
+		getBeepAlert()
+		return
+	}
+	if beepAlert {
+		fmt.Println("Will beep on last notification")
+	} else {
+		fmt.Println("Won't beep")
 	}
 }
