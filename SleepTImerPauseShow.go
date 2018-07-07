@@ -2,12 +2,17 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"syscall"
 	"time"
 	"unsafe"
 
+	"github.com/gen2brain/beeep"
 	"github.com/micmonay/keybd_event"
 )
+
+var pauseAfter = 30
+var startAlerts = 5
 
 var lastInput = getLastInput()
 
@@ -17,7 +22,7 @@ var lastInputInfo struct {
 }
 
 func main() {
-	timer(30) // in minutes
+	timer(pauseAfter) // in minutes
 }
 
 func pauseShow() {
@@ -47,6 +52,7 @@ func timer(t int) {
 		isInput := wasThereInput()
 		if !isInput {
 			fmt.Println("sleeping", i)
+			alert(i)
 			time.Sleep(1 * time.Minute)
 			i++
 		} else if isInput {
@@ -65,6 +71,12 @@ func timer(t int) {
 
 }
 
+func alert(idleSince int) {
+	if pauseAfter-idleSince <= startAlerts {
+		notifyTimeBefore(pauseAfter - idleSince)
+	}
+}
+
 // gets the last time user input in ms since system started
 func getLastInput() uint32 {
 	//From https://stackoverflow.com/questions/22949444/using-golang-to-get-windows-idle-time-getlastinputinfo-or-similar
@@ -80,4 +92,18 @@ func getLastInput() uint32 {
 		panic("error getting last input info: " + err.Error())
 	}
 	return lastInputInfo.dwTime
+}
+
+func notifyTimeBefore(t int) {
+	fmt.Println("Notify")
+	err := beeep.Notify("Sleep Timer", "Pausing your show in "+strconv.Itoa(t)+" mins\nMove your mouse or press a button to reset timer", "assets/information.png")
+	if err != nil {
+		panic(err)
+	}
+	if t == 1 {
+		err := beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
