@@ -123,7 +123,7 @@ func getTimeForTimer() {
 	text = strings.Trim(text, "\r\n")
 	if text != "" {
 		i, err := strconv.Atoi(text)
-		if err != nil {
+		if err != nil || i <= 0 {
 			fmt.Println("Invalid Number: ", err)
 			getTimeForTimer()
 			return
@@ -140,7 +140,7 @@ func getAlertTime() {
 	text = strings.Trim(text, "\r\n")
 	if text != "" {
 		i, err := strconv.Atoi(text)
-		if err != nil {
+		if err != nil || i < 0 {
 			fmt.Println("Invalid Number: ", err)
 			getTimeForTimer()
 			return
